@@ -16,37 +16,37 @@
 const PIP_VIEWS = {
   front: {
     w: 7.2, hw: 5.2, cx: 0, fw: 1, sides: [-1, 1], eyeDist: 1.65, mx: 0, bx: 0, bw: 1,
-    tuftX: 0, tuftAngle: 0, tailX: 0, showTail: false,
+    tuftX: 0, tuftAngle: 0, tailX: 0, tailY: -2.4, showTail: false,
     legs: [[-1.3, 0], [1.3, 0]],
     wings: [[-3.4, -1, 'L', 0], [3.4, 1, 'R', 0]],
     hatX: 0, hatW: 1
   },
   q: {
-    w: 7.0, hw: 5.0, cx: 0.9, fw: 0.82, sides: [-1, 1], eyeDist: 1.5, mx: 1.6, bx: 0.7, bw: 0.85,
-    tuftX: -0.4, tuftAngle: -0.2, tailX: -3.2, showTail: true,
+    w: 7.0, hw: 5.0, cx: 0.8, fw: 0.8, sides: [-1, 1], eyeDist: 1.4, mx: 0.35, bx: 0.6, bw: 0.85,
+    tuftX: -0.4, tuftAngle: -0.2, tailX: -3.0, tailY: -2.7, showTail: true,
     stripSide: -1, seam: -1.2,
-    legs: [[-0.8, 1], [1.5, 0]],
-    wings: [[3.3, 1, 'R', 2], [-2.6, -1, 'L', 1]],
+    legs: [[-0.8, 1], [1.4, 0]],
+    wings: [[-2.8, -1, 'L', 2], [2.0, 1, 'R', 1]],
     hatX: 0.5, hatW: 0.92
   },
   side: {
-    w: 6.2, hw: 4.8, cx: 1.1, fw: 0.6, sides: [1], eyeDist: 0.95, mx: 2.8, bx: 0.8, bw: 0.65,
-    tuftX: -0.8, tuftAngle: -0.35, tailX: -2.9, showTail: true,
+    w: 6.2, hw: 4.8, cx: 1.0, fw: 0.55, sides: [1], eyeDist: 0.95, mx: 2.8, bx: 1.5, bw: 0.6,
+    tuftX: -0.8, tuftAngle: -0.35, tailX: -2.8, tailY: -2.7, showTail: true,
     legs: [[-0.9, 1], [1.1, 0]],
-    wings: [[0.6, 0, 'L', 1]],
+    wings: [[-0.2, 0, 'L', 1]],
     hatX: 0.3, hatW: 0.78
   },
   qback: {
     w: 7.0, hw: 5.0, cx: 0, fw: 0, sides: [], mx: 0, bx: 0, bw: 0,
-    tuftX: 0.4, tuftAngle: 0.2, tailX: 2.5, showTail: true,
-    stripSide: 1, seam: 1.2, back: true,
-    legs: [[1.5, 0], [-0.8, 1]],
-    wings: [[-3.3, -1, 'R', 2], [2.6, 1, 'L', 1]],
+    tuftX: 0.4, tuftAngle: 0.2, tailX: -2.8, tailY: -2.7, showTail: true, back: true,
+    stripSide: 1, seam: 1.2,
+    legs: [[1.4, 0], [-0.8, 1]],
+    wings: [[2.8, 1, 'R', 2], [-2.0, -1, 'L', 1]],
     hatX: -0.4, hatW: 0.92
   },
   back: {
     w: 7.2, hw: 5.2, cx: 0, fw: 0, sides: [], mx: 0, bx: 0, bw: 0,
-    tuftX: 0, tuftAngle: 0, tailX: 0, showTail: true, back: true,
+    tuftX: 0, tuftAngle: 0, tailX: 0, tailY: -2.4, showTail: true, back: true,
     legs: [[-1.3, 0], [1.3, 0]],
     wings: [[-3.4, -1, 'R', 0], [3.4, 1, 'L', 0]],
     hatX: 0, hatW: 1
@@ -132,12 +132,16 @@ function pip(x, y, u, o = {}) {
     if (dir === 0) { // side view near wing
       rotate(0.35 - a);
       pipWingShape(u, sw, J, layer === 2 ? mixCol(col, dk, .35) : col, dk, sw * .8);
-      if (hook) { translate(2.3 * u, 0.4 * u); hook(u, sw); }
+      if (hook) { translate(2.2 * u, 0); hook(u, sw); }
     } else {
       rotate(dir < 0 ? a : -a);
       if (dir < 0) scale(-1, 1);
       pipWingShape(u, sw, J, layer === 2 ? mixCol(col, dk, .35) : col, dk, sw * .8);
-      if (hook) { translate(2.3 * u, 0.4 * u); hook(u, sw); }
+      if (hook) {
+        translate(2.2 * u, 0);
+        if (dir < 0) scale(-1, 1);
+        hook(u, sw);
+      }
     }
     pop();
   };
@@ -145,8 +149,8 @@ function pip(x, y, u, o = {}) {
   // 1. Far wings (behind body)
   V.wings.filter(w => w[3] !== 1).forEach(wing);
 
-  // 2. Tail (if visible, and not in back view where it sits on top)
-  if (V.showTail && !V.back) {
+  // 2. Tail (drawn behind body for natural silhouette & fanned feathers)
+  if (V.showTail) {
     rs('tail');
     pipTail(u, sw, J, V, col, dk, o);
   }
@@ -159,9 +163,9 @@ function pip(x, y, u, o = {}) {
       if (o.walk != null) {
         const ph = (o.walk + (i === 0 ? 0 : .5)) * TAU;
         stepX = Math.sin(ph) * .45;
-        const lift = Math.max(0, -Math.cos(ph));
-        stepH = 2.0 - lift * 0.9;
-        toeRot = Math.sin(ph) * 0.25;
+        const lift = Math.max(0, Math.cos(ph));
+        stepH = 2.0 - lift * 0.7;
+        toeRot = Math.sin(ph) * 0.2;
       }
       pipFoot(u, sw, J, lx + stepX, stepH, toeRot, isFar ? mixCol(feet, PAL.ink, .25) : feet, isFar ? far : dk);
     });
@@ -192,12 +196,6 @@ function pip(x, y, u, o = {}) {
 
   // Ink outline of the body
   paint(bodyPts, { ink: PAL.ink, sw, curv: .35 });
-
-  // If back view, draw tail on top of body
-  if (V.back && V.showTail) {
-    rs('tail');
-    pipTail(u, sw, J, V, col, dk, o);
-  }
 
   // Gloom on forehead
   if (o.gloom > .02) pipGloom(u, sw, V, o.gloom);
@@ -280,14 +278,15 @@ function pipBodyGeometry(u, j, V) {
   return pts;
 }
 
-// Belly patch: soft rounded egg patch
+// Belly patch: soft rounded egg patch (curves around front breast in side view)
 function pipBelly(u, sw, j, V, bellyCol) {
-  const bx = V.bx * u, by = -4.3 * u;
-  const bw = (2.2 * V.bw) * u, bh = 2.1 * u;
-  const pts = ellPts(bx, by, bw, bh, 20, j * 0.6, 0);
+  const isSide = V === PIP_VIEWS.side;
+  const bx = V.bx * u, by = isSide ? -4.1 * u : -4.3 * u;
+  const bw = (2.2 * V.bw) * u, bh = isSide ? 2.5 * u : 2.1 * u;
+  const pts = ellPts(bx, by, bw, bh, 20, j * 0.6, isSide ? -0.15 : 0);
   paint(pts, { wash: bellyCol, washOp: 255, fill: '#FFF1D6', fillOp: 50, ink: null, curv: .3 });
   // subtle delicate ink outline
-  inkLine(pts, sw * .45, mixCol(PAL.ink, bellyCol, .4), 'inkfine', .4);
+  inkLine(pts, sw * .4, mixCol(PAL.ink, bellyCol, .4), 'inkfine', .4);
 }
 
 // Signature head tuft: 2 bouncy curved feathers
@@ -328,7 +327,7 @@ function pipTuft(u, sw, j, col, dk, lt, o) {
   pop();
 }
 
-// Strip shading along the 3/4 seam, strictly constrained to body points
+// Strip shading along the 3/4 receding flank: soft organic watercolour volume without a harsh mechanical ink line
 function pipStripShading(u, sw, j, V, bodyPts, dk) {
   const seamX = V.seam * u;
   const isLeft = V.stripSide === -1;
@@ -339,49 +338,49 @@ function pipStripShading(u, sw, j, V, bodyPts, dk) {
     const patch = isLeft
       ? [...filtered, [seamX, maxY], [seamX, minY]]
       : [[seamX, minY], [seamX, maxY], ...filtered];
-    paint(patch, { fill: dk, fillOp: 130, bleed: 0, tex: .5, border: .2, ink: null });
-    inkLine([[seamX + jit(j), minY + 0.2 * u], [seamX + jit(j), (minY + maxY) / 2], [seamX + jit(j), maxY - 0.2 * u]], sw * .5, PAL.ink, 'inkfine', .1);
+    paint(patch, { fill: dk, fillOp: 110, bleed: .1, tex: .6, border: .3, ink: null });
   }
 }
 
-// Tail: 3 cute fan feathers
+// Tail: cute fanned feathers with beat-locked wagging
 function pipTail(u, sw, j, V, col, dk, o) {
   const bp = bpOf(T);
-  const wag = Math.sin(bp * TAU) * 0.18 * u;
-  const tx = V.tailX * u, ty = -3.2 * u + wag;
+  const wag = Math.sin(bp * TAU) * 0.15;
+  const tx = (V.tailX || 0) * u, ty = (V.tailY || -2.7) * u;
 
   push();
   translate(tx, ty);
-  if (V.back) {
-    // Back view: tail centered on lower back, pointing up-back
+
+  if (V === PIP_VIEWS.back) {
+    // Back view: tail emerging from lower back/rump, fanning DOWNWARDS and OUTWARDS
+    rotate(wag * 0.5);
     for (let k = -1; k <= 1; k++) {
       push();
-      rotate(k * 0.25);
+      rotate(k * 0.28);
       const feather = [
         [-0.4 * u, 0],
-        [-0.55 * u + jit(j), -1.3 * u],
-        [0, -1.9 * u + jit(j)],
-        [0.55 * u + jit(j), -1.3 * u],
+        [-0.55 * u + jit(j), 1.0 * u],
+        [0, 1.7 * u + jit(j)],
+        [0.55 * u + jit(j), 1.0 * u],
         [0.4 * u, 0]
       ];
-      paint(feather, { wash: k === 0 ? col : mixCol(col, dk, .3), ink: PAL.ink, sw: sw * .65, curv: .35 });
+      paint(feather, { wash: k === 0 ? col : mixCol(col, dk, .3), fill: dk, fillOp: 60, ink: PAL.ink, sw: sw * .65, curv: .35 });
       pop();
     }
   } else {
-    // Side / 3/4 views: fan pointing out behind
-    const dir = V.tailX < 0 ? -1 : 1;
-    scale(dir, 1);
+    // Side, 3/4, and 3/4-back views: fan of 3 feathers pointing OUT-LEFT (-x)
+    rotate(wag);
     for (let k = -1; k <= 1; k++) {
       push();
-      rotate(k * 0.22 - 0.1);
+      rotate(k * 0.25 - 0.1);
       const feather = [
-        [0, -0.4 * u],
-        [-1.4 * u + jit(j), -0.6 * u],
+        [0, -0.35 * u],
+        [-1.3 * u + jit(j), -0.55 * u],
         [-2.0 * u + jit(j), 0],
-        [-1.4 * u + jit(j), 0.6 * u],
-        [0, 0.4 * u]
+        [-1.3 * u + jit(j), 0.55 * u],
+        [0, 0.35 * u]
       ];
-      paint(feather, { wash: k === 0 ? col : mixCol(col, dk, .35), ink: PAL.ink, sw: sw * .65, curv: .35 });
+      paint(feather, { wash: k === 0 ? col : mixCol(col, dk, .35), fill: dk, fillOp: 60, ink: PAL.ink, sw: sw * .65, curv: .35 });
       pop();
     }
   }
@@ -402,23 +401,23 @@ function pipWingShape(u, sw, j, col, dk, strokeW) {
   paint(wingPts, { wash: col, washOp: 255, fill: dk, fillOp: 70, ink: PAL.ink, sw: strokeW, curv: .35 });
 }
 
-// Foot: cute ankle + rounded two/three toes
+// Foot: cute ankle + rounded two/three toes resting exactly on floor (y = 0)
 function pipFoot(u, sw, j, lx, h, toeRot, footCol, shadowCol) {
   push();
   translate(lx * u, -h * u);
   // Ankle/leg
-  paint(rectPts(-0.35 * u, 0, 0.7 * u, h * u - 0.2 * u, j * 0.5), { wash: footCol, ink: PAL.ink, sw: sw * .65 });
-  // Toes on ground
-  translate(0, h * u - 0.2 * u);
+  paint(rectPts(-0.25 * u, 0, 0.5 * u, h * u - 0.25 * u, j * 0.4), { wash: footCol, ink: PAL.ink, sw: sw * .65 });
+  // Toes on ground (bottom touches y = 0 exactly)
+  translate(0, h * u - 0.25 * u);
   rotate(toeRot);
   const toes = [
-    [-0.7 * u, 0],
-    [-0.85 * u + jit(j), 0.32 * u],
-    [-0.3 * u + jit(j), 0.38 * u],
-    [0.1 * u + jit(j), 0.42 * u],
-    [0.65 * u + jit(j), 0.38 * u],
-    [0.8 * u + jit(j), 0.28 * u],
-    [0.6 * u, 0]
+    [-0.55 * u, -0.15 * u],
+    [-0.7 * u + jit(j), 0.25 * u],
+    [-0.25 * u + jit(j), 0.25 * u],
+    [0.1 * u + jit(j), 0.25 * u],
+    [0.55 * u + jit(j), 0.25 * u],
+    [0.7 * u + jit(j), 0.2 * u],
+    [0.55 * u, -0.15 * u]
   ];
   paint(toes, { wash: footCol, fill: shadowCol, fillOp: 60, ink: PAL.ink, sw: sw * .7, curv: .3 });
   pop();
@@ -610,27 +609,29 @@ function pipBeak(u, m, sw, beakCol, V) {
   // Front / 3/4 beak
   if (isOpen) {
     // Open beak: upper jaw + dark opening + lower jaw
-    const w = 0.9 * u;
+    const w = 0.85 * u;
+    const skew = isQ ? 0.15 * u : 0;
     // Upper beak
-    paint([[-w * 0.9, -5.4 * u], [0, -5.7 * u], [w * 0.9, -5.4 * u], [0, -5.1 * u]], { wash: beakCol, ink: PAL.ink, sw: sw * .65, curv: .2 });
+    paint([[-w * 0.9 + skew, -5.4 * u], [skew * 0.5, -5.7 * u], [w * 0.9 + skew, -5.4 * u], [skew, -5.1 * u]], { wash: beakCol, ink: PAL.ink, sw: sw * .65, curv: .2 });
     // Inside mouth
-    paint([[-w * 0.7, -5.1 * u], [w * 0.7, -5.1 * u], [w * 0.5, -4.4 * u], [-w * 0.5, -4.4 * u]], { wash: darkMouth, ink: null, curv: .3 });
+    paint([[-w * 0.7 + skew, -5.1 * u], [w * 0.7 + skew, -5.1 * u], [w * 0.5 + skew, -4.4 * u], [-w * 0.5 + skew, -4.4 * u]], { wash: darkMouth, ink: null, curv: .3 });
     // Pink tongue
-    paint(ellPts(0, -4.6 * u, w * 0.4, 0.22 * u, 10), { wash: PAL.rose, ink: null });
+    paint(ellPts(skew, -4.6 * u, w * 0.4, 0.22 * u, 10), { wash: PAL.rose, ink: null });
     // Lower beak rim
-    paint([[-w * 0.65, -4.6 * u], [0, -4.3 * u], [w * 0.65, -4.6 * u]], { wash: beakCol, ink: PAL.ink, sw: sw * .65, curv: .3 });
+    paint([[-w * 0.65 + skew, -4.6 * u], [skew, -4.3 * u], [w * 0.65 + skew, -4.6 * u]], { wash: beakCol, ink: PAL.ink, sw: sw * .65, curv: .3 });
   } else {
     // Resting closed triangular beak
-    const bw = 0.75 * u, bh = 0.65 * u;
+    const bw = 0.72 * u, bh = 0.62 * u;
+    const skew = isQ ? 0.15 * u : 0;
     const beakPts = [
-      [-bw, -5.35 * u],
-      [0, -5.55 * u],
-      [bw, -5.35 * u],
-      [0, -5.35 * u + bh]
+      [-bw + skew, -5.35 * u],
+      [skew * 0.5, -5.55 * u],
+      [bw + skew, -5.35 * u],
+      [skew * 0.5, -5.35 * u + bh]
     ];
     paint(beakPts, { wash: beakCol, ink: PAL.ink, sw: sw * .75, curv: .25 });
     // Subtle mouth split line
-    inkLine([[-bw * 0.7, -5.35 * u], [bw * 0.7, -5.35 * u]], sw * .4, PAL.ink, 'inkfine', 0);
+    inkLine([[-bw * 0.7 + skew, -5.35 * u], [bw * 0.7 + skew, -5.35 * u]], sw * .4, PAL.ink, 'inkfine', 0);
   }
 }
 
@@ -677,8 +678,8 @@ const PIP_EMO = {
   relieved:   { eyes: 'closed', beak: 'smile', emote: 'sweat', take: .4, body: t => { const b = _b(t), br = Math.sin(t * TAU * .35); return { sq: .05 + .05 * br, dy: -.15 * b.ab, aL: -.65, aR: -.65 }; } },
   sad:        { eyes: 'sad', beak: 'smile', tint: 'blue', tintK: .35, gloom: .35, emote: 'cloud', take: .3, body: t => { const b = _b(t), s = Math.sin(b.bp * Math.PI / 4); return { sq: .08 + .02 * s, rot: .03 * s, aL: -.7, aR: -.7, lookY: .5 }; } },
   cry:        { eyes: 'cry', beak: 'wail', tint: 'blue', tintK: .2, take: .8, body: t => { const b = _b(t), sob = Math.sin(b.f * Math.PI) * Math.exp(-b.f * 2); return { sq: .14 * sob - .02, dy: -.6 * sob, aL: .8 + .15 * Math.sin(t * TAU * 6), aR: .8 - .15 * Math.sin(t * TAU * 6), rot: .03 * b.s1 }; } },
-  angry:      { eyes: 'angry', beak: 'smile', tint: 'flush', tintK: .45, emote: 'anger', take: .8, body: t => { const b = _b(t); return { dx: .1 * Math.sin(t * TAU * 18), sq: .12 * b.hit, aL: -.4 + .1 * b.hit, aR: -.4 + .1 * b.hit }; } },
-  furious:    { eyes: 'angry', beak: 'open', tint: 'flush', tintK: .85, emote: 'steam', take: 1.2, body: t => { const b = _b(t); return { dx: .22 * Math.sin(t * TAU * 20), rot: .025 * Math.sin(t * TAU * 13), sq: .2 * b.hit, dy: -.7 * Math.sin(b.f * Math.PI) * (1 - b.f), aL: 1 + .2 * Math.sin(t * TAU * 9), aR: 1 - .2 * Math.sin(t * TAU * 9), flap: true }; } },
+  angry:      { eyes: 'angry', beak: 'smile', tint: '#8B4268', tintK: .55, blush: .6, emote: 'anger', take: .8, body: t => { const b = _b(t); return { dx: .1 * Math.sin(t * TAU * 18), sq: .12 * b.hit, aL: -.4 + .1 * b.hit, aR: -.4 + .1 * b.hit }; } },
+  furious:    { eyes: 'angry', beak: 'open', tint: '#A6335C', tintK: .65, blush: .9, emote: 'steam', take: 1.2, body: t => { const b = _b(t); return { dx: .22 * Math.sin(t * TAU * 20), rot: .025 * Math.sin(t * TAU * 13), sq: .2 * b.hit, dy: -.7 * Math.sin(b.f * Math.PI) * (1 - b.f), aL: 1 + .2 * Math.sin(t * TAU * 9), aR: 1 - .2 * Math.sin(t * TAU * 9), flap: true }; } },
   scared:     { eyes: 'scared', beak: 'open', tint: 'pale', tintK: .6, emote: 'sweat', take: 1.1, body: t => ({ dx: .1 * Math.sin(t * TAU * 22), sq: -.06, aL: 1 + .08 * Math.sin(t * TAU * 17), aR: 1 + .08 * Math.sin(t * TAU * 19), flap: true }) },
   surprised:  { eyes: 'wide', beak: 'O', emote: '!', fade: true, take: 1.3, body: t => { const b = _b(t); return { sq: -.14, dy: -.4 - .15 * b.ab, aL: 1.2 + .05 * b.s2, aR: 1.2 - .05 * b.s2, flap: true }; } },
   confused:   { eyes: ['narrow', 'wide'], beak: 'smile', emote: '?', take: .6, body: t => { const b = _b(t); return { rot: .12 * Math.sin(b.bp * Math.PI / 4), aL: -.5, aR: 1.3 + .15 * Math.sin(t * TAU * 3), dy: -.15 * b.ab }; } },
@@ -741,7 +742,7 @@ function pipMove(style, t, seed = 0) {
     case 'bounce': o.dy = -ab * 1.8; o.sq = hit * .14; o.aL = .3 + s1; o.aR = .3 - s1; break;
     case 'hop': o.dy = -ab * 4.2; o.sq = hit * .2; o.aL = o.aR = .8 + ab * 0.9; o.flap = true; break;
     case 'flutter': o.dy = -ab * 2.0; o.flap = true; o.aL = o.aR = 1.0; o.sq = hit * .08; break;
-    case 'waddle': case 'walk': o.walk = bp / 1.8; o.dy = -ab * .5; o.aL = -.5 + .25 * s1; o.aR = -.5 - .25 * s1; break;
+    case 'waddle': case 'walk': o.walk = bp / 2; o.dy = 0; o.aL = -.5 + .25 * s1; o.aR = -.5 - .25 * s1; break;
     case 'run': o.walk = bp * 1.6; o.dy = -Math.abs(Math.sin(bp * TAU)); o.aL = .7 * Math.sin(bp * TAU); o.aR = -o.aL; o.rot = -.07; o.flap = true; break;
     case 'spin': {
       const ph = (((bi % 4) + 4) % 4 === 3) ? bf : 0;
