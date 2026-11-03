@@ -26,14 +26,14 @@ const PIP_VIEWS = {
     tuftX: -0.4, tuftAngle: -0.2, tailX: -3.0, tailY: -2.7, showTail: true,
     stripSide: -1, seam: -1.2,
     legs: [[-0.8, 1], [1.4, 0]],
-    wings: [[-2.8, -1, 'L', 2], [2.0, 1, 'R', 1]],
+    wings: [[3.2, 1, 'R', 2], [-2.7, -1, 'L', 1]],
     hatX: 0.5, hatW: 0.92
   },
   side: {
     w: 6.2, hw: 4.8, cx: 1.0, fw: 0.55, sides: [1], eyeDist: 0.95, mx: 2.8, bx: 1.5, bw: 0.6,
     tuftX: -0.8, tuftAngle: -0.35, tailX: -2.8, tailY: -2.7, showTail: true,
     legs: [[-0.9, 1], [1.1, 0]],
-    wings: [[-0.2, 0, 'L', 1]],
+    wings: [[-0.1, 0, 'L', 1]],
     hatX: 0.3, hatW: 0.78
   },
   qback: {
@@ -41,7 +41,7 @@ const PIP_VIEWS = {
     tuftX: 0.4, tuftAngle: 0.2, tailX: -2.8, tailY: -2.7, showTail: true, back: true,
     stripSide: 1, seam: 1.2,
     legs: [[1.4, 0], [-0.8, 1]],
-    wings: [[2.8, 1, 'R', 2], [-2.0, -1, 'L', 1]],
+    wings: [[-3.2, -1, 'R', 2], [2.7, 1, 'L', 1]],
     hatX: -0.4, hatW: 0.92
   },
   back: {
@@ -128,11 +128,14 @@ function pip(x, y, u, o = {}) {
     const hook = which === 'L' ? o.armL : o.armR;
 
     push();
-    translate(px * u, -4.8 * u);
-    if (dir === 0) { // side view near wing
-      rotate(0.35 - a);
+    const slide = dir * 0.45 * clamp((a + 0.1) / 1.2);
+    translate((px + slide) * u, -4.8 * u);
+    if (dir === 0) { // side view near wing: folds back-down along flank, flaps up-back away from face/eye
+      translate(0, 0.1 * u);
+      rotate(a * 0.72 - 0.15);
+      scale(-1, 1);
       pipWingShape(u, sw, J, layer === 2 ? mixCol(col, dk, .35) : col, dk, sw * .8);
-      if (hook) { translate(2.2 * u, 0); hook(u, sw); }
+      if (hook) { translate(2.2 * u, 0); scale(-1, 1); hook(u, sw); }
     } else {
       rotate(dir < 0 ? a : -a);
       if (dir < 0) scale(-1, 1);
@@ -149,8 +152,8 @@ function pip(x, y, u, o = {}) {
   // 1. Far wings (behind body)
   V.wings.filter(w => w[3] !== 1).forEach(wing);
 
-  // 2. Tail (drawn behind body for natural silhouette & fanned feathers)
-  if (V.showTail) {
+  // 2. Tail (drawn behind body for side / 3/4 views)
+  if (V.showTail && V !== PIP_VIEWS.back) {
     rs('tail');
     pipTail(u, sw, J, V, col, dk, o);
   }
@@ -196,6 +199,12 @@ function pip(x, y, u, o = {}) {
 
   // Ink outline of the body
   paint(bodyPts, { ink: PAL.ink, sw, curv: .35 });
+
+  // Back-view tail (emerges from lower back on near side when facing away)
+  if (V.showTail && V === PIP_VIEWS.back) {
+    rs('tail');
+    pipTail(u, sw, J, V, col, dk, o);
+  }
 
   // Gloom on forehead
   if (o.gloom > .02) pipGloom(u, sw, V, o.gloom);
